@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Base (Light) ── */
+    --background: 0 0% 93%;
+    --foreground: 213 96% 9%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 213 96% 9%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 213 96% 9%;
+
+    --primary: 213 96% 9%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 213 96% 9%;
+
+    --muted: 0 0% 89%;
+    --muted-foreground: 213 40% 30%;
+
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 82%;
+    --input: 0 0% 82%;
+    --ring: 239 84% 67%;
+
+    --radius: 0.625rem;
+
+    /* ── Sidebar (Light) ── */
+    --sidebar-background: 213 96% 6%;
+    --sidebar-foreground: 240 20% 75%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 96% 9%;
+    --sidebar-accent-foreground: 240 20% 95%;
+    --sidebar-border: 213 50% 14%;
+    --sidebar-ring: 239 84% 67%;
+
+    /* ── TaskAI semantic tokens ── */
+    --status-overdue: 0 84% 60%;
+    --status-on-track: 160 84% 39%;
+    --status-attention: 43 96% 56%;
+    --status-neutral: 213 20% 50%;
+
+    --priority-urgent: 0 84% 60%;
+    --priority-high: 25 95% 53%;
+    --priority-medium: 239 84% 67%;
+    --priority-low: 213 20% 55%;
+
+    --kanban-column: 0 0% 96%;
+    --kanban-card-hover: 0 0% 89%;
+
+    --surface-overlay: 0 0% 98%;
+  }
+
+  .dark {
+    /* ── Base (Dark — Navy) ── */
+    --background: 213 96% 6%;
+    --foreground: 240 20% 95%;
+
+    --card: 213 70% 11%;
+    --card-foreground: 240 20% 95%;
+
+    --popover: 213 70% 11%;
+    --popover-foreground: 240 20% 95%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 213 50% 14%;
+    --secondary-foreground: 240 20% 95%;
+
+    --muted: 213 50% 14%;
+    --muted-foreground: 240 10% 65%;
+
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 43 96% 65%;
+    --warning-foreground: 213 96% 9%;
+
+    --border: 213 40% 16%;
+    --input: 213 40% 16%;
+    --ring: 239 84% 67%;
+
+    /* ── Sidebar (Dark) ── */
+    --sidebar-background: 213 96% 4%;
+    --sidebar-foreground: 240 10% 65%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 70% 10%;
+    --sidebar-accent-foreground: 240 20% 95%;
+    --sidebar-border: 213 40% 12%;
+    --sidebar-ring: 239 84% 67%;
+
+    /* ── TaskAI semantic tokens (Dark) ── */
+    --status-overdue: 0 72% 56%;
+    --status-on-track: 160 84% 45%;
+    --status-attention: 43 96% 65%;
+    --status-neutral: 240 10% 65%;
+
+    --priority-urgent: 0 72% 56%;
+    --priority-high: 25 95% 58%;
+    --priority-medium: 239 84% 67%;
+    --priority-low: 240 10% 65%;
+
+    --kanban-column: 213 70% 9%;
+    --kanban-card-hover: 213 50% 14%;
+
+    --surface-overlay: 213 70% 11%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

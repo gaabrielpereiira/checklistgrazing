@@ -1,0 +1,1 @@
+ALTER TABLE public.subtasks ADD COLUMN IF NOT EXISTS due_date date;
