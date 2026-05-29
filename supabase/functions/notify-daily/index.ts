@@ -104,7 +104,13 @@ serve(async (req) => {
       }
 
       // ── 7. Email ──
-      const emailEnabled = prefs.daily_digest !== "whatsapp_only" && !!profile.email;
+      // Enviar email se: preferência for "email", "both", "all" ou não definida (default)
+      // Não envia somente se for explicitamente "app" ou "whatsapp"
+      const digestPref = prefs.daily_digest as string | undefined;
+      const emailEnabled =
+        !!profile.email &&
+        digestPref !== "app" &&
+        digestPref !== "whatsapp";
       if (emailEnabled) {
         try {
           const html = emailDailyDigest({
@@ -140,9 +146,11 @@ serve(async (req) => {
       if (!profile.phone) continue;
 
       const shouldSendWA =
+        digestPref === "whatsapp" ||
+        digestPref === "both" ||
+        digestPref === "all" ||
         prefs.task_due_today === "whatsapp" ||
         prefs.task_due_today === "both" ||
-        prefs.daily_digest === "whatsapp_only" ||
         profile.whatsapp_notifications;
 
       if (shouldSendWA) {

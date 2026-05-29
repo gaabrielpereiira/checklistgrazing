@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TaskDetailPanelProps {
   task: FullTask | null;
@@ -48,6 +49,7 @@ export function TaskDetailPanel({ task, columns, profiles = [], onClose, expandI
   const { data: collections } = useCollections();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
@@ -261,7 +263,15 @@ export function TaskDetailPanel({ task, columns, profiles = [], onClose, expandI
                       if (newId && newId !== task.assignee_id) {
                         setAssigneeModal({ open: true, newAssigneeId: newId });
                       } else {
-                        updateTask.mutate({ id: task.id, assignee_id: newId });
+                        updateTask.mutate({ id: task.id, assignee_id: newId }, {
+                          onSuccess: () => {
+                            if (newId) {
+                              supabase.functions.invoke("notify-task-assigned", {
+                                body: { task_id: task.id, assigner_id: user?.id },
+                              }).catch(console.warn);
+                            }
+                          },
+                        });
                       }
                     }}
                   >
@@ -517,7 +527,13 @@ export function TaskDetailPanel({ task, columns, profiles = [], onClose, expandI
         onOpenChange={(open) => setAssigneeModal(prev => ({ ...prev, open }))}
         assigneeName={profiles.find(p => p.user_id === assigneeModal.newAssigneeId)?.name || ""}
         onKeepCurrent={() => {
-          updateTask.mutate({ id: task.id, assignee_id: assigneeModal.newAssigneeId });
+          updateTask.mutate({ id: task.id, assignee_id: assigneeModal.newAssigneeId }, {
+            onSuccess: () => {
+              supabase.functions.invoke("notify-task-assigned", {
+                body: { task_id: task.id, assigner_id: user?.id },
+              }).catch(console.warn);
+            },
+          });
         }}
         onAutoAdapt={async () => {
           const totalHours = (task as any).duration_hours || ((task as any).duration_days || 1) * dailyHours;
@@ -537,7 +553,13 @@ export function TaskDetailPanel({ task, columns, profiles = [], onClose, expandI
             assignee_id: assigneeModal.newAssigneeId,
             position_hour: result.startHour,
             due_date: result.dueDateStr,
-          } as any);
+          } as any, {
+            onSuccess: () => {
+              supabase.functions.invoke("notify-task-assigned", {
+                body: { task_id: task.id, assigner_id: user?.id },
+              }).catch(console.warn);
+            },
+          });
           toast.success("Task posicionada automaticamente na agenda!");
         }}
       />

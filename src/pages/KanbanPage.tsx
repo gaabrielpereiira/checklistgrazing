@@ -159,9 +159,11 @@ export default function KanbanPage() {
   const handleModalTaskCreate = async (data: import("@/components/NewTaskModal").NewTaskData) => {
     if (!newTaskColumnId || !collectionId) return;
     try {
+      let createdTaskId: string | null = null;
+
       if (data.auto_position) {
         // Edge function: creates task + overrides atomically server-side
-        const { error } = await supabase.functions.invoke("auto-create-task", {
+        const { data: autoData, error } = await supabase.functions.invoke("auto-create-task", {
           body: {
             title: data.title,
             description: data.description,
@@ -179,13 +181,14 @@ export default function KanbanPage() {
           },
         });
         if (error) throw error;
+        createdTaskId = autoData?.task_id ?? null;
         // Invalidate caches so Gantt picks up the new task + overrides
         qc.invalidateQueries({ queryKey: ["all-tasks"] });
         qc.invalidateQueries({ queryKey: ["tasks", collectionId] });
         qc.invalidateQueries({ queryKey: ["schedule-overrides"] });
       } else {
         // Normal creation via client
-        createTask.mutate({
+        const result = await supabase.from("tasks").insert({
           title: data.title,
           column_id: newTaskColumnId,
           collection_id: collectionId,
@@ -193,9 +196,21 @@ export default function KanbanPage() {
           assignee_id: data.assignee_id,
           priority: data.priority,
           due_date: data.due_date,
+          created_by: user?.id,
           ...(data.project_id ? { project_id: data.project_id } : {}),
           ...(data.duration_hours ? { duration_hours: data.duration_hours } : {}),
-        } as any);
+        }).select("id").single();
+        if (result.error) throw result.error;
+        createdTaskId = result.data?.id ?? null;
+        qc.invalidateQueries({ queryKey: ["tasks", collectionId] });
+        qc.invalidateQueries({ queryKey: ["all-tasks"] });
+      }
+
+      // Notificar por email se houver responsável
+      if (createdTaskId && data.assignee_id) {
+        supabase.functions.invoke("notify-task-assigned", {
+          body: { task_id: createdTaskId, assigner_id: user?.id },
+        }).catch(console.warn);
       }
 
       setNewTaskModalOpen(false);

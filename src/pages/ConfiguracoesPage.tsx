@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ColorPicker } from "@/components/ColorPicker";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, Plus, Trash2, Link2, Users, Building2, Phone, MessageSquare, QrCode, Loader2, CheckCircle, RefreshCw, Wifi, WifiOff, Server, Key, Globe, AlertTriangle, Shield, Clock, Sparkles } from "lucide-react";
+import { Settings, Plus, Trash2, Link2, Users, Building2, Phone, MessageSquare, QrCode, Loader2, CheckCircle, RefreshCw, Wifi, WifiOff, Server, Key, Globe, AlertTriangle, Shield, Clock, Sparkles, Mail } from "lucide-react";
 import { WorkScheduleSettings } from "@/components/WorkScheduleSettings";
 import { toast } from "sonner";
 
@@ -566,6 +566,7 @@ function InstanceRow({ instance, onSelect, onDelete, onUpdated }: { instance: an
 
 // --- Notification Preferences Component ---
 const NOTIFICATION_TYPES = [
+  { key: "new_task", label: "Nova tarefa atribuída" },
   { key: "request_received", label: "Solicitação recebida" },
   { key: "request_accepted", label: "Solicitação aceita" },
   { key: "request_refused", label: "Solicitação recusada" },
@@ -696,34 +697,197 @@ function ProfileSection({ profile, updateProfile }: { profile: any; updateProfil
   );
 }
 
-type ChannelPref = "app" | "whatsapp" | "both";
+type ChannelPref = "app" | "email" | "whatsapp" | "both" | "all";
 
 function NotificationPreferences({ profile, updateProfile }: { profile: any; updateProfile: any }) {
-  const prefs: Record<string, ChannelPref> = profile?.notification_preferences || {};
+  const prefs: Record<string, string> = profile?.notification_preferences || {};
 
-  const handleChange = (type: string, value: ChannelPref) => {
+  const handleChange = (type: string, value: string) => {
     const updated = { ...prefs, [type]: value };
     updateProfile.mutate({ id: profile.id, notification_preferences: updated });
   };
 
+  // Default para nova_task é "email" já que é o mais útil
+  const getDefault = (key: string) => key === "new_task" ? "email" : "app";
+
   return (
-    <div className="rounded-xl border bg-card p-6 space-y-4">
-      <h3 className="font-heading font-semibold text-card-foreground">Preferências de notificação</h3>
-      <p className="text-xs text-muted-foreground">Escolha onde receber cada tipo de notificação.</p>
-      <div className="space-y-3">
+    <div className="rounded-xl border bg-card p-6 space-y-5">
+      <div>
+        <h3 className="font-heading font-semibold text-card-foreground">Preferências de notificação</h3>
+        <p className="text-xs text-muted-foreground mt-1">Escolha onde receber cada tipo de notificação.</p>
+      </div>
+
+      {/* Digest diário */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-card-foreground">Resumo diário</p>
+            <p className="text-xs text-muted-foreground">Atrasadas · Para hoje · Amanhã — enviado às 8h</p>
+          </div>
+          <Select value={prefs["daily_digest"] || "email"} onValueChange={(v) => handleChange("daily_digest", v)}>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="app">Só no app</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="both">Email + WhatsApp</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Notificações individuais */}
+      <div className="space-y-2">
         {NOTIFICATION_TYPES.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between gap-4">
             <span className="text-sm text-card-foreground">{label}</span>
-            <Select value={prefs[key] || "app"} onValueChange={(v) => handleChange(key, v as ChannelPref)}>
-              <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <Select value={prefs[key] || getDefault(key)} onValueChange={(v) => handleChange(key, v as ChannelPref)}>
+              <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="app">Só no app</SelectItem>
-                <SelectItem value="whatsapp">Só WhatsApp</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
                 <SelectItem value="both">App + WhatsApp</SelectItem>
+                <SelectItem value="all">Todos (app + email + WA)</SelectItem>
               </SelectContent>
             </Select>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Email Integration Component ---
+function EmailIntegration() {
+  const [gmailUser, setGmailUser] = useState("");
+  const [appPassword, setAppPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleSave = async () => {
+    if (!gmailUser.trim() || !appPassword.trim()) {
+      toast.error("Preencha o email e a senha de app");
+      return;
+    }
+    setSaving(true);
+    try {
+      // Salva os dois secrets no vault via store-api-key
+      const { data: d1, error: e1 } = await supabase.functions.invoke("store-api-key", {
+        body: { service_name: "gmail_user", secret_value: gmailUser.trim(), label: "Gmail remetente" },
+      });
+      const { data: d2, error: e2 } = await supabase.functions.invoke("store-api-key", {
+        body: { service_name: "gmail_app_password", secret_value: appPassword.trim(), label: "Gmail App Password" },
+      });
+      if (e1 || e2 || !d1?.success || !d2?.success) throw new Error("Erro ao salvar no vault");
+      toast.success("Credenciais de email salvas! Reinicie a Edge Function notify-daily no dashboard do Supabase.");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-daily", { body: {} });
+      if (error) throw error;
+      setTestResult({ ok: true, message: `Digest disparado com sucesso! Emails enviados: ${data?.emailsSent ?? 0}` });
+    } catch (err: any) {
+      setTestResult({ ok: false, message: err?.message || "Erro ao disparar" });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Configuração SMTP */}
+      <div className="rounded-xl border bg-card p-6 space-y-5">
+        <div>
+          <h3 className="font-heading font-semibold text-card-foreground">Remetente de email (Gmail)</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure uma conta Gmail para enviar notificações. Use uma{" "}
+            <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              Senha de App
+            </a>{" "}
+            (não a senha normal da conta).
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+          <p className="font-medium text-card-foreground">Como gerar a Senha de App:</p>
+          <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+            <li>Acesse <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-primary underline">myaccount.google.com/security</a></li>
+            <li>Ative a verificação em duas etapas (se ainda não estiver ativa)</li>
+            <li>Pesquise "Senhas de app" na barra de pesquisa</li>
+            <li>Crie uma senha para "Outro (nome personalizado)" → ex: <strong>Grazing Tasks</strong></li>
+            <li>Copie a senha de 16 caracteres gerada</li>
+          </ol>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Email remetente (Gmail)</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="seuemail@gmail.com"
+                value={gmailUser}
+                onChange={(e) => setGmailUser(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Senha de App (16 caracteres)</label>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type={showPass ? "text" : "password"}
+                placeholder="xxxx xxxx xxxx xxxx"
+                value={appPassword}
+                onChange={(e) => setAppPassword(e.target.value)}
+                className="pl-9 pr-20 font-mono text-sm"
+                maxLength={19}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                {showPass ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving || !gmailUser.trim() || !appPassword.trim()} className="w-full gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {saving ? "Salvando..." : "Salvar credenciais"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Testar e disparar manualmente */}
+      <div className="rounded-xl border bg-card p-6 space-y-4">
+        <div>
+          <h3 className="font-heading font-semibold text-card-foreground">Digest diário</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Enviado automaticamente todos os dias úteis às <strong>8h (BRT)</strong> com tarefas atrasadas, de hoje e de amanhã.
+            Use o botão abaixo para testar agora.
+          </p>
+        </div>
+
+        {testResult && (
+          <div className={`flex items-center gap-2 p-3 rounded-lg border text-sm ${testResult.ok ? "bg-primary/10 border-primary/20 text-primary" : "bg-destructive/10 border-destructive/20 text-destructive"}`}>
+            {testResult.ok ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+            {testResult.message}
+          </div>
+        )}
+
+        <Button variant="outline" onClick={handleTest} className="gap-2">
+          <Mail className="h-4 w-4" /> Disparar digest agora
+        </Button>
       </div>
     </div>
   );
@@ -974,6 +1138,7 @@ export default function ConfiguracoesPage() {
             {isAdmin && <TabsTrigger value="setores"><Building2 className="h-3.5 w-3.5 mr-1" /> Setores</TabsTrigger>}
             {isAdmin && <TabsTrigger value="usuarios"><Users className="h-3.5 w-3.5 mr-1" /> Usuários</TabsTrigger>}
             {isAdmin && <TabsTrigger value="acesso"><Shield className="h-3.5 w-3.5 mr-1" /> Acesso</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 mr-1" /> Email</TabsTrigger>}
             {isAdmin && <TabsTrigger value="whatsapp"><MessageSquare className="h-3.5 w-3.5 mr-1" /> WhatsApp</TabsTrigger>}
             {isAdmin && <TabsTrigger value="slack"><MessageSquare className="h-3.5 w-3.5 mr-1" /> Slack</TabsTrigger>}
             {isManager && <TabsTrigger value="agenda"><Clock className="h-3.5 w-3.5 mr-1" /> Agenda</TabsTrigger>}
@@ -1201,6 +1366,11 @@ export default function ConfiguracoesPage() {
                 </div>
               );
             })}
+          </TabsContent>
+
+          {/* Email */}
+          <TabsContent value="email" className="mt-4">
+            <EmailIntegration />
           </TabsContent>
 
           {/* WhatsApp */}
