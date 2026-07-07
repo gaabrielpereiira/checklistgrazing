@@ -41,7 +41,7 @@ export function AppSidebar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shrink-0">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
-          {!collapsed && <span className="font-heading text-lg font-bold text-foreground">Alexandre</span>}
+          {!collapsed && <span className="font-heading text-lg font-bold text-foreground">Galileu's</span>}
         </div>
       </SidebarHeader>
       <SidebarContent>

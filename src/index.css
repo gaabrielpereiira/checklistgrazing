@@ -53,7 +53,7 @@
     --sidebar-border: 213 50% 14%;
     --sidebar-ring: 239 84% 67%;
 
-    /* ── Alexandre semantic tokens ── */
+    /* ── Galileu's semantic tokens ── */
     --status-overdue: 0 84% 60%;
     --status-on-track: 160 84% 39%;
     --status-attention: 43 96% 56%;
@@ -116,7 +116,7 @@
     --sidebar-border: 213 40% 12%;
     --sidebar-ring: 239 84% 67%;
 
-    /* ── Alexandre semantic tokens (Dark) ── */
+    /* ── Galileu's semantic tokens (Dark) ── */
     --status-overdue: 0 72% 56%;
     --status-on-track: 160 84% 45%;
     --status-attention: 43 96% 65%;
