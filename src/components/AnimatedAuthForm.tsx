@@ -33,6 +33,20 @@ const AnimatedAuthForm = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = window.prompt("Digite seu email para receber o link de recuperação:", loginEmail);
+    if (!email) return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Enviamos um link de recuperação para o seu email.");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -344,7 +358,7 @@ const AnimatedAuthForm = () => {
                 <Lock className="auth-icon" size={20} />
               </div>
               <div className="auth-forgot-link">
-                <a href="#">Esqueceu a senha?</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleForgotPassword(); }}>Esqueceu a senha?</a>
               </div>
               <button type="submit" className="auth-btn" disabled={submitting}>
                 {submitting ? "Carregando..." : "Login"}
