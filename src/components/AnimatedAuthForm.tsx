@@ -358,7 +358,7 @@ const AnimatedAuthForm = () => {
                 <Lock className="auth-icon" size={20} />
               </div>
               <div className="auth-forgot-link">
-                <a href="#">Esqueceu a senha?</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleForgotPassword(); }}>Esqueceu a senha?</a>
               </div>
               <button type="submit" className="auth-btn" disabled={submitting}>
                 {submitting ? "Carregando..." : "Login"}
