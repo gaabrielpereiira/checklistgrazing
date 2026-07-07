@@ -1,124 +1,90 @@
-# Reestruturação ClickUp-like — Fase 1
+# Fase 2 — Enriquecimento ClickUp-like
 
-Recomeço do zero com nova hierarquia, quatro visualizações e campos personalizados por Lista. Dados antigos de coleções/colunas/projetos serão descartados.
+Amplia a base já entregue com os recursos que ficaram pendentes na Fase 1. Sem mudanças destrutivas no schema.
 
-## Nova hierarquia
+## 1. Subtarefas
 
-```text
-Workspace
-└── Space (Setor)
-    └── Folder (Pasta)
-        ├── List (Lista de tarefas)
-        │   └── Task
-        │       └── Subtask
-        └── Doc (Documento — editor rico)
-```
+- No modal de tarefa (`TaskModal`), quando a tarefa já existe, mostrar seção "Subtarefas":
+  - Lista das subtarefas (query em `tasks` com `parent_task_id = task.id`)
+  - Input inline para criar nova subtarefa (herda `list_id` da pai)
+  - Toggle de conclusão, título editável, exclusão
+- No `ListView`, indicador visual `▸ 3` quando a tarefa tem subtarefas; clicar expande inline mostrando as subtarefas indentadas
+- Subtarefas concluídas contam para um progresso `x/y` mostrado na coluna Título
 
-Tarefas podem ser criadas em qualquer nível (Space/Folder/List). Internamente ficam sempre vinculadas a uma Lista "default" auto-criada no nível pai, para manter consistência de views e filtros.
+## 2. Editor rich-text de Documentos (TipTap)
 
-## Novo schema (migration única, descarta o antigo)
+- Instalar `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`
+- Reescrever `DocPage`:
+  - Editor TipTap salvo em `docs.content` (JSON do TipTap)
+  - Bubble menu com bold/italic/underline/strike/code/link
+  - Toolbar fixa: H1–H3, listas, checklist, citação, código, separador
+  - Autosave debounced (800ms)
+  - Título permanece em `<input>` grande no topo
+- Migração leve dos docs existentes: se `content.text` existir, converter em nó parágrafo TipTap ao carregar
 
-Tabelas a criar (todas com RLS + GRANTs):
+## 3. Campos personalizados por Lista (UI)
 
-- `spaces` — nome, cor, ícone, ordem, workspace_id
-- `folders` — nome, cor, space_id, ordem
-- `lists` — nome, cor, folder_id (nullable, permite lista solta no Space), ordem, is_default
-- `docs` — título, conteúdo (JSONB — TipTap), folder_id/space_id, ordem
-- `tasks` — reescrita: list_id, parent_task_id (subtask), title, description, start_date, due_date, due_time, assignee_id, priority, status_id, position, created_by
-- `statuses` — por Lista: nome, cor, ordem, tipo (todo/active/done). Default: "Pessoal", "Grazing", "Outro"
-- `custom_fields` — por Lista: nome, tipo (text/number/select/date/checkbox/user), options JSONB, ordem, is_visible
-- `task_field_values` — task_id, field_id, value JSONB
-- `list_views` — visualizações salvas por Lista: tipo (list/kanban/calendar/gantt), config JSONB (colunas visíveis, ordem, filtros, agrupamento), owner_id, is_shared
+- Botão "Campos" na toolbar da Lista abre painel lateral (`Sheet`):
+  - Lista os campos (`custom_fields`) com nome, tipo, visibilidade, ordem
+  - Botão "+ Campo" com escolha de tipo: texto, número, data, checkbox, select (com edição de opções), usuário, URL, e-mail
+  - Reordenar (drag), renomear, ocultar/mostrar, excluir
+- `ListView` renderiza colunas visíveis dinamicamente após as fixas
+- Célula editável inline por tipo:
+  - texto/número/url/email → input
+  - data → date picker
+  - checkbox → switch
+  - select → dropdown
+  - user → combobox de responsáveis
+- Persistência via `task_field_values` (upsert por `task_id + field_id`)
+- `TaskModal` também renderiza os campos personalizados na parte inferior
 
-Tabelas antigas a **remover**: `collections`, `collection_users`, `collection_teams`, `columns`, `column_automations`, `column_connections`, `projects`, `subtasks` (substituída por `tasks` com `parent_task_id`), `task_kanban_history`, `task_schedule_overrides`.
+## 4. Filtros AND/OR salvos por view
 
-Preservado: `profiles`, `user_roles`, `teams`, `team_members`, `sectors`, `user_sectors`, `workspaces`, `workspace_holidays`, `notifications`, `requests`, `impediments`, `chat_*`, `slack_*`, `whatsapp_*`.
+- Substituir os selects atuais por um `Popover` "Filtros" com construtor:
+  - Adicionar condição: campo (fixo ou custom) + operador (`é`/`não é`/`contém`/`vazio`/`entre datas` etc, dependente do tipo) + valor
+  - Alternar entre AND e OR
+- Botão "Salvar view" cria/atualiza registro em `list_views` com `type` da tab atual + `config` (colunas visíveis, ordem, filtros, agrupamento, sort)
+- Barra de tabs de views salvas ao lado das 4 tabs padrão, com menu para renomear/excluir/tornar padrão
+- Nova view = criar `list_views` do tipo escolhido; view "própria" tem `is_shared=false`
 
-RLS: acesso via workspace_id (herdado por join até Space → Folder → List). Funções `user_has_space_access`, `user_has_list_access` (security definer) para evitar recursão.
+## 5. Drag-and-drop na sidebar
 
-## Sidebar (navegação em árvore)
+- Usar `@dnd-kit/core` (já no projeto)
+- Cada nó (Space, Folder, List, Doc) é `useDraggable` + `useDroppable`
+- Regras:
+  - Space reordena entre Spaces
+  - Folder reordena dentro do Space; pode mover para outro Space
+  - List/Doc reordena dentro do container (Folder ou Space) e pode mover entre Folders/Spaces
+- Atualiza `position` (recalcula sequência) e `folder_id`/`space_id` conforme drop
+- Indicador visual: linha entre irmãos (reorder) vs. destaque no container (mover para dentro)
 
-Substitui o seletor de Coleção atual. Árvore expansível:
+## 6. Melhorias de UX
 
-```text
-▾ 🏢 Marketing (Space)
-  ▾ 📁 Campanhas Q1 (Folder)
-    · ✅ Redes sociais (List)
-    · 📄 Briefing (Doc)
-  · ✅ Backlog (List solta)
-▸ 🏢 Comercial
-```
-
-Cada nó tem menu de contexto: Renomear, Cor, Adicionar Lista/Doc/Folder abaixo, Excluir. Drag-and-drop para reordenar/mover.
-
-## Quatro visualizações (por Lista)
-
-Cada Lista abre num layout com tabs de views. Views são configuráveis e salvas em `list_views`.
-
-1. **Lista** — tabela virtualizada. Colunas: fixas (título, status, responsável, prazo, prioridade) + custom fields. Reordenar por drag, mostrar/ocultar, agrupar por qualquer coluna, ordenar clicando no header.
-2. **Kanban** — colunas = statuses da Lista. Drag entre statuses. Card mostra campos escolhidos na config da view.
-3. **Calendário** — mensal/semanal, tarefas posicionadas por `start_date`/`due_date`. Drag para mover.
-4. **Gantt** — timeline com `start_date` → `due_date`, dependências (fase 2), zoom dia/semana/mês.
-
-Toolbar comum a todas as views: **+ Task**, **Filtros**, **Ordenar**, **Agrupar**, **Colunas**, **Salvar view**.
-
-## Modal de Task
-
-- Campos: título, descrição (rich text), data de início (default: hoje), data de término (com toggle de horário), responsável, prioridade, status
-- Breadcrumb no topo com Space > Folder > List (clicável)
-- Sub-tarefas (mesma tabela, `parent_task_id`)
-- Custom fields da Lista renderizados dinamicamente
-- Comentários (fase 2)
-- Botão "+ Task" disponível em qualquer nível da árvore; se clicado num Space/Folder, cria numa Lista default auto-gerada
-
-## Filtros modulares
-
-Painel de filtros construído dinamicamente a partir das colunas da Lista (fixas + custom). Operadores por tipo (é/não é/contém/vazio/entre datas). Múltiplas condições AND/OR. Filtros salvos junto com a view.
-
-## Documentos
-
-Página `/docs/:id` com editor TipTap (extensões: heading, lista, checkbox, código, tabela, imagem, link, mention). Autosave. Aparece na sidebar como filho de Folder ou Space.
-
-## Roteamento
-
-- `/` → redireciona para primeira Lista acessível
-- `/s/:spaceId` → visão geral do Space (todas as tasks)
-- `/l/:listId` → Lista com views
-- `/d/:docId` → Documento
-- `/t/:taskId` → abre task em painel lateral sobre a rota atual
-
-Rotas antigas (`/`, `/gantt`, `/panoramica`, etc.) reaproveitadas ou removidas: Kanban/Gantt viram tabs dentro de `/l/:listId`. Mantidos: `/meu-dia`, `/chat`, `/solicitacoes`, `/equipe`, `/equipes`, `/configuracoes`.
-
-## O que sai nesta Fase 1
-
-- Nova hierarquia completa (Space/Folder/List/Doc)
-- Migration destrutiva substituindo o schema antigo
-- Sidebar em árvore com CRUD e drag-and-drop
-- CRUD de Task e Subtask com breadcrumb
-- 4 views funcionais por Lista, com salvamento de configuração
-- Custom fields por Lista (text, number, select, date, checkbox, user)
-- Filtros/ordenação/agrupamento por qualquer coluna
-- Editor de Documentos (TipTap básico)
-- Statuses customizáveis por Lista (defaults: Pessoal / Grazing / Outro)
-
-## Fica para fases futuras
-
-- Formulários e Whiteboards
-- Dependências no Gantt, cargas de trabalho, sprints
-- Custom fields globais no workspace
-- Automations avançadas (as antigas serão descartadas)
-- Templates de Lista
-- Permissões finas por Space/Folder/List (nesta fase, herda do workspace + role)
+- Reordenar tarefas dentro da Lista via drag no ListView (atualiza `position`)
+- Reordenar cards dentro da coluna no Kanban
+- Clicar num status na tabela abre um mini-popover para trocar rapidamente
+- Botão "..." na barra topo da Lista → renomear, mudar cor, excluir, gerenciar status
+- Painel "Status" (Sheet): CRUD dos `statuses` da Lista com cor e tipo (todo/active/done)
 
 ## Detalhes técnicos
 
-- **Editor de docs**: `@tiptap/react` + extensões starter-kit, task-list, table, link, image
-- **Tabela virtualizada**: `@tanstack/react-table` + `@tanstack/react-virtual`
-- **Gantt**: componente customizado sobre `date-fns` (evita libs pesadas)
-- **DnD**: `@dnd-kit/core` (já usado no projeto)
-- **Estado**: React Query para servidor; Zustand leve para UI da view (filtros temporários)
-- **Realtime**: Supabase realtime nas tabelas `tasks`, `lists`, `custom_fields` para colaboração
-- **Migration**: DROP CASCADE nas tabelas antigas e CREATE do novo schema em uma única transação, com GRANTs e políticas RLS baseadas em `has_role` e funções `user_has_*_access`
-- **Seed pós-migration**: cria 1 Space "Geral", 1 Folder "Padrão", 1 List "Minhas Tarefas" com statuses default para cada workspace existente
+- Hooks novos:
+  - `useCustomFields`, `useUpsertFieldValue`
+  - `useSubtasks(parentId)`
+  - `useListViews(listId)`, `useSaveView`
+  - `useReorderTree` (atualização em massa de `position`)
+- Bibliotecas a instalar:
+  - `@tiptap/react @tiptap/starter-kit @tiptap/extension-task-list @tiptap/extension-task-item @tiptap/extension-link @tiptap/extension-placeholder`
+- Sem migration destrutiva. Possíveis ajustes:
+  - Adicionar índice `tasks_position_idx` em `(list_id, position)`
+  - Adicionar `custom_fields.width` (INTEGER) para colunas com largura persistida
 
-Confirme para eu prosseguir com a migration destrutiva e a implementação — assim que aprovar, começo pelo schema + sidebar em árvore e depois as views.
+## Fica fora desta fase
+
+- Realtime multi-usuário nos Docs
+- Menções (`@user`) no editor
+- Formulários e Whiteboards
+- Automations (regras de troca de status, notificações WhatsApp/Slack adaptadas ao novo schema — as edge functions estão desativadas)
+- Chat IA reescrito para o novo schema
+
+Ao aprovar, começo pelas subtarefas + status manager (mudanças menores), depois campos personalizados, filtros salvos, editor TipTap e por fim o DnD na sidebar.

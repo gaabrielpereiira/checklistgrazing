@@ -17,8 +17,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { NotificationPanel } from "@/components/NotificationPanel";
 import {
   useWorkspaceTree, useCreateSpace, useCreateFolder, useCreateList, useCreateDoc,
-  useRenameNode, useDeleteNode,
+  useRenameNode, useDeleteNode, useMoveNode,
 } from "@/hooks/useWorkspaceTree";
+
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -79,10 +80,33 @@ export function AppSidebar() {
   const createDoc = useCreateDoc();
   const rename = useRenameNode();
   const del = useDeleteNode();
+  const move = useMoveNode();
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [creatingIn, setCreatingIn] = useState<{ kind: "space" | "list" | "folder" | "doc"; parentId?: string; folderId?: string | null } | null>(null);
   const [renaming, setRenaming] = useState<{ table: "spaces" | "folders" | "lists"; id: string; current: string } | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
+  const onDragStart = (e: React.DragEvent, table: "lists" | "docs" | "folders", id: string) => {
+    e.dataTransfer.setData("application/x-node", JSON.stringify({ table, id }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onDropOnSpace = (e: React.DragEvent, spaceId: string) => {
+    e.preventDefault(); setDragOver(null);
+    const raw = e.dataTransfer.getData("application/x-node");
+    if (!raw) return;
+    const { table, id } = JSON.parse(raw);
+    if (table === "lists" || table === "docs") move.mutate({ table, id, patch: { space_id: spaceId, folder_id: null } });
+    else if (table === "folders") move.mutate({ table, id, patch: { space_id: spaceId } });
+  };
+  const onDropOnFolder = (e: React.DragEvent, folder: { id: string; space_id: string }) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(null);
+    const raw = e.dataTransfer.getData("application/x-node");
+    if (!raw) return;
+    const { table, id } = JSON.parse(raw);
+    if (table === "lists" || table === "docs") move.mutate({ table, id, patch: { space_id: folder.space_id, folder_id: folder.id } });
+  };
+
 
   const toggle_ = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
@@ -137,9 +161,14 @@ export function AppSidebar() {
                 <div
                   className={cn(
                     "group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent",
+                    dragOver === `space:${node.space.id}` && "bg-primary/10 ring-1 ring-primary",
                   )}
                   onClick={() => toggle_(node.space.id)}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(`space:${node.space.id}`); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={(e) => onDropOnSpace(e, node.space.id)}
                 >
+
                   {spaceOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                   <span className="h-3 w-3 rounded shrink-0" style={{ backgroundColor: node.space.color || "#6366f1" }} />
                   {!collapsed && (
@@ -180,8 +209,21 @@ export function AppSidebar() {
                     {node.folders.map((f) => {
                       const folderOpen = expanded[f.id] ?? true;
                       return (
-                        <div key={f.id}>
-                          <div className="group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent" onClick={() => toggle_(f.id)}>
+                        <div key={f.id}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, "folders", f.id)}
+                        >
+                          <div
+                            className={cn(
+                              "group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent",
+                              dragOver === `folder:${f.id}` && "bg-primary/10 ring-1 ring-primary",
+                            )}
+                            onClick={() => toggle_(f.id)}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(`folder:${f.id}`); }}
+                            onDragLeave={() => setDragOver(null)}
+                            onDrop={(e) => onDropOnFolder(e, { id: f.id, space_id: node.space.id })}
+                          >
+
                             {folderOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                             <FolderIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             {renaming?.table === "folders" && renaming.id === f.id ? (
@@ -208,7 +250,10 @@ export function AppSidebar() {
                           {folderOpen && (
                             <div className="ml-5 space-y-0.5 border-l border-sidebar-border pl-2">
                               {f.lists.map((l) => (
-                                <div key={l.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/l/${l.id}`)}>
+                                <div key={l.id} draggable onDragStart={(e) => onDragStart(e, "lists", l.id)}
+                                  className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")}
+                                  onClick={() => navigate(`/l/${l.id}`)}>
+
                                   <ListTodo className="h-3.5 w-3.5 shrink-0" style={{ color: l.color || undefined }} />
                                   {renaming?.table === "lists" && renaming.id === l.id ? (
                                     <InlineCreate placeholder="Nome" onSubmit={(name) => { rename.mutate({ table: "lists", id: l.id, name }); setRenaming(null); }} onCancel={() => setRenaming(null)} />
@@ -222,7 +267,10 @@ export function AppSidebar() {
                                 </div>
                               ))}
                               {f.docs.map((d) => (
-                                <div key={d.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/d/${d.id}`)}>
+                                <div key={d.id} draggable onDragStart={(e) => onDragStart(e, "docs", d.id)}
+                                  className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")}
+                                  onClick={() => navigate(`/d/${d.id}`)}>
+
                                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                   <span className="flex-1 truncate">{d.title}</span>
                                   <NodeMenu
@@ -243,7 +291,10 @@ export function AppSidebar() {
                     })}
 
                     {node.looseLists.map((l) => (
-                      <div key={l.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/l/${l.id}`)}>
+                      <div key={l.id} draggable onDragStart={(e) => onDragStart(e, "lists", l.id)}
+                        className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")}
+                        onClick={() => navigate(`/l/${l.id}`)}>
+
                         <ListTodo className="h-3.5 w-3.5 shrink-0" style={{ color: l.color || undefined }} />
                         <span className="flex-1 truncate">{l.name}</span>
                         <NodeMenu
@@ -253,7 +304,10 @@ export function AppSidebar() {
                       </div>
                     ))}
                     {node.looseDocs.map((d) => (
-                      <div key={d.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/d/${d.id}`)}>
+                      <div key={d.id} draggable onDragStart={(e) => onDragStart(e, "docs", d.id)}
+                        className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")}
+                        onClick={() => navigate(`/d/${d.id}`)}>
+
                         <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         <span className="flex-1 truncate">{d.title}</span>
                         <NodeMenu onDelete={() => { if (confirm("Excluir documento?")) del.mutate({ table: "docs", id: d.id }); }} />

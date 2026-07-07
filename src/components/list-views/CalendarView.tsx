@@ -22,7 +22,12 @@ export function CalendarView({ listId, onOpenTask, filter }: { listId: string; o
     return cells;
   }, [cursor]);
 
-  const filtered = useMemo(() => (filter ? tasks.filter(filter) : tasks), [tasks, filter]);
+  const filtered = useMemo(() => {
+    let base = tasks.filter((t) => !t.parent_task_id);
+    if (filter) base = base.filter(filter);
+    return base;
+  }, [tasks, filter]);
+
   const byDate = useMemo(() => {
     const m: Record<string, Task[]> = {};
     filtered.forEach((t) => { if (t.due_date) (m[t.due_date] ||= []).push(t); });
