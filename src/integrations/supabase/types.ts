@@ -149,6 +149,7 @@ export type Database = {
           position: number
           type: string
           updated_at: string
+          width: number | null
         }
         Insert: {
           created_at?: string
@@ -160,6 +161,7 @@ export type Database = {
           position?: number
           type: string
           updated_at?: string
+          width?: number | null
         }
         Update: {
           created_at?: string
@@ -171,6 +173,7 @@ export type Database = {
           position?: number
           type?: string
           updated_at?: string
+          width?: number | null
         }
         Relationships: [
           {
