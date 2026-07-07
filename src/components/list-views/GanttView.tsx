@@ -7,7 +7,12 @@ function daysBetween(a: Date, b: Date) { return Math.round((b.getTime() - a.getT
 export function GanttView({ listId, onOpenTask, filter }: { listId: string; onOpenTask: (t: Task) => void; filter?: (t: Task) => boolean }) {
   const { data: tasks = [] } = useTasks(listId);
 
-  const items = useMemo(() => (filter ? tasks.filter(filter) : tasks).filter((t) => t.start_date && t.due_date), [tasks, filter]);
+  const items = useMemo(() => {
+    let base = tasks.filter((t) => !t.parent_task_id);
+    if (filter) base = base.filter(filter);
+    return base.filter((t) => t.start_date && t.due_date);
+  }, [tasks, filter]);
+
 
   const { min, max, days } = useMemo(() => {
     if (items.length === 0) {

@@ -9,13 +9,15 @@ export function KanbanView({ listId, onOpenTask, filter }: { listId: string; onO
   const update = useUpdateTask();
 
   const grouped = useMemo(() => {
-    const filtered = filter ? tasks.filter(filter) : tasks;
+    let base = tasks.filter((t) => !t.parent_task_id);
+    if (filter) base = base.filter(filter);
     const map: Record<string, Task[]> = {};
     statuses.forEach((s) => (map[s.id] = []));
     map["__no__"] = [];
-    filtered.forEach((t) => (map[t.status_id || "__no__"] ||= []).push(t));
+    base.forEach((t) => (map[t.status_id || "__no__"] ||= []).push(t));
     return map;
   }, [tasks, statuses, filter]);
+
 
   const handleDrop = (statusId: string | null, e: React.DragEvent) => {
     e.preventDefault();
