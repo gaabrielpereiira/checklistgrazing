@@ -80,10 +80,33 @@ export function AppSidebar() {
   const createDoc = useCreateDoc();
   const rename = useRenameNode();
   const del = useDeleteNode();
+  const move = useMoveNode();
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [creatingIn, setCreatingIn] = useState<{ kind: "space" | "list" | "folder" | "doc"; parentId?: string; folderId?: string | null } | null>(null);
   const [renaming, setRenaming] = useState<{ table: "spaces" | "folders" | "lists"; id: string; current: string } | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
+  const onDragStart = (e: React.DragEvent, table: "lists" | "docs" | "folders", id: string) => {
+    e.dataTransfer.setData("application/x-node", JSON.stringify({ table, id }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onDropOnSpace = (e: React.DragEvent, spaceId: string) => {
+    e.preventDefault(); setDragOver(null);
+    const raw = e.dataTransfer.getData("application/x-node");
+    if (!raw) return;
+    const { table, id } = JSON.parse(raw);
+    if (table === "lists" || table === "docs") move.mutate({ table, id, patch: { space_id: spaceId, folder_id: null } });
+    else if (table === "folders") move.mutate({ table, id, patch: { space_id: spaceId } });
+  };
+  const onDropOnFolder = (e: React.DragEvent, folder: { id: string; space_id: string }) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(null);
+    const raw = e.dataTransfer.getData("application/x-node");
+    if (!raw) return;
+    const { table, id } = JSON.parse(raw);
+    if (table === "lists" || table === "docs") move.mutate({ table, id, patch: { space_id: folder.space_id, folder_id: folder.id } });
+  };
+
 
   const toggle_ = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
