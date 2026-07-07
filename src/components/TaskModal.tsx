@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Trash2, Plus, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useProfiles, useStatuses, type Task, type TaskPriority } from "@/hooks/useListData";
+import { Switch } from "@/components/ui/switch";
+import { useProfiles, useStatuses, useUpdateTask, useDeleteTask, type Task, type TaskPriority } from "@/hooks/useListData";
+import { useSubtasks, useCreateSubtask } from "@/hooks/useSubtasks";
+import { useCustomFields, useUpsertFieldValue, useFieldValues } from "@/hooks/useCustomFields";
+import { cn } from "@/lib/utils";
 
 interface TaskModalProps {
   open: boolean;
@@ -20,6 +25,14 @@ interface TaskModalProps {
 export function TaskModal({ open, onOpenChange, listId, breadcrumb, task, onSubmit }: TaskModalProps) {
   const { data: profiles = [] } = useProfiles();
   const { data: statuses = [] } = useStatuses(listId);
+  const { data: customFields = [] } = useCustomFields(listId);
+  const { data: fieldValues = {} } = useFieldValues(listId);
+  const upsertValue = useUpsertFieldValue();
+  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
+
+  const { data: subtasks = [] } = useSubtasks(task?.id);
+  const createSubtask = useCreateSubtask();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -30,6 +43,7 @@ export function TaskModal({ open, onOpenChange, listId, breadcrumb, task, onSubm
   const [useTime, setUseTime] = useState(false);
   const [dueTime, setDueTime] = useState("");
   const [assignee, setAssignee] = useState<string>("none");
+  const [newSubtask, setNewSubtask] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -64,9 +78,44 @@ export function TaskModal({ open, onOpenChange, listId, breadcrumb, task, onSubm
     onOpenChange(false);
   };
 
+  const addSub = () => {
+    if (!task || !newSubtask.trim()) return;
+    createSubtask.mutate({ parent_task_id: task.id, list_id: listId, title: newSubtask.trim() });
+    setNewSubtask("");
+  };
+
+  const visibleFields = customFields.filter((f) => f.is_visible);
+  const taskValues = task ? fieldValues[task.id] || {} : {};
+
+  const renderFieldEditor = (f: any) => {
+    const v = taskValues[f.id];
+    const save = (value: any) => task && upsertValue.mutate({ task_id: task.id, field_id: f.id, value, list_id: listId });
+    if (!task) return <div className="text-xs text-muted-foreground">Disponível após criar</div>;
+    switch (f.type) {
+      case "checkbox":
+        return <Switch checked={!!v} onCheckedChange={save} />;
+      case "date":
+        return <Input type="date" defaultValue={v || ""} onBlur={(e) => e.target.value !== v && save(e.target.value || null)} className="h-8" />;
+      case "number":
+        return <Input type="number" defaultValue={v ?? ""} onBlur={(e) => save(e.target.value === "" ? null : Number(e.target.value))} className="h-8" />;
+      case "user":
+        return (
+          <Select value={v || "none"} onValueChange={(val) => save(val === "none" ? null : val)}>
+            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {profiles.map((p: any) => <SelectItem key={p.user_id} value={p.user_id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        );
+      default:
+        return <Input defaultValue={v ?? ""} onBlur={(e) => save(e.target.value || null)} className="h-8" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
           {breadcrumb && <p className="text-xs text-muted-foreground">{breadcrumb}</p>}
@@ -89,10 +138,7 @@ export function TaskModal({ open, onOpenChange, listId, breadcrumb, task, onSubm
                 <SelectContent>
                   {statuses.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                        {s.name}
-                      </span>
+                      <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -136,6 +182,49 @@ export function TaskModal({ open, onOpenChange, listId, breadcrumb, task, onSubm
               </SelectContent>
             </Select>
           </div>
+
+          {visibleFields.length > 0 && (
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-xs uppercase text-muted-foreground">Campos personalizados</Label>
+              {visibleFields.map((f) => (
+                <div key={f.id} className="grid grid-cols-3 gap-2 items-center">
+                  <span className="text-sm">{f.name}</span>
+                  <div className="col-span-2">{renderFieldEditor(f)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {task && (
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-xs uppercase text-muted-foreground">Subtarefas ({subtasks.filter((s) => s.is_done).length}/{subtasks.length})</Label>
+              <div className="space-y-1">
+                {subtasks.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 group">
+                    <Checkbox checked={s.is_done} onCheckedChange={(c) => updateTask.mutate({ id: s.id, patch: { is_done: !!c } })} />
+                    <Input
+                      defaultValue={s.title}
+                      onBlur={(e) => e.target.value !== s.title && updateTask.mutate({ id: s.id, patch: { title: e.target.value } })}
+                      className={cn("h-7 border-0 shadow-none focus-visible:ring-0 px-1 flex-1", s.is_done && "line-through text-muted-foreground")}
+                    />
+                    <button onClick={() => deleteTask.mutate({ id: s.id, list_id: listId })} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={newSubtask}
+                  onChange={(e) => setNewSubtask(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addSub()}
+                  placeholder="Adicionar subtarefa"
+                  className="h-7 border-0 shadow-none focus-visible:ring-0 px-1 flex-1"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
