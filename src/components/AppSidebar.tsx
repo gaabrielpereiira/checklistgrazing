@@ -161,9 +161,14 @@ export function AppSidebar() {
                 <div
                   className={cn(
                     "group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent",
+                    dragOver === `space:${node.space.id}` && "bg-primary/10 ring-1 ring-primary",
                   )}
                   onClick={() => toggle_(node.space.id)}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(`space:${node.space.id}`); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={(e) => onDropOnSpace(e, node.space.id)}
                 >
+
                   {spaceOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                   <span className="h-3 w-3 rounded shrink-0" style={{ backgroundColor: node.space.color || "#6366f1" }} />
                   {!collapsed && (
@@ -204,8 +209,21 @@ export function AppSidebar() {
                     {node.folders.map((f) => {
                       const folderOpen = expanded[f.id] ?? true;
                       return (
-                        <div key={f.id}>
-                          <div className="group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent" onClick={() => toggle_(f.id)}>
+                        <div key={f.id}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, "folders", f.id)}
+                        >
+                          <div
+                            className={cn(
+                              "group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent",
+                              dragOver === `folder:${f.id}` && "bg-primary/10 ring-1 ring-primary",
+                            )}
+                            onClick={() => toggle_(f.id)}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(`folder:${f.id}`); }}
+                            onDragLeave={() => setDragOver(null)}
+                            onDrop={(e) => onDropOnFolder(e, { id: f.id, space_id: node.space.id })}
+                          >
+
                             {folderOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                             <FolderIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             {renaming?.table === "folders" && renaming.id === f.id ? (
