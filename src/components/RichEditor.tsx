@@ -53,23 +53,6 @@ export function RichEditor({ content, onChange }: Props) {
         <ToolbarButton title="Separador" onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus className="h-4 w-4" /></ToolbarButton>
       </div>
 
-      <BubbleMenu editor={editor} className="flex items-center gap-0.5 bg-popover border rounded-md shadow-md p-1">
-        <ToolbarButton title="Negrito" onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")}><Bold className="h-3.5 w-3.5" /></ToolbarButton>
-        <ToolbarButton title="Itálico" onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")}><Italic className="h-3.5 w-3.5" /></ToolbarButton>
-        <ToolbarButton title="Riscado" onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")}><Strikethrough className="h-3.5 w-3.5" /></ToolbarButton>
-        <ToolbarButton title="Código" onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive("code")}><Code className="h-3.5 w-3.5" /></ToolbarButton>
-        <ToolbarButton
-          title="Link"
-          onClick={() => {
-            const prev = editor.getAttributes("link").href;
-            const url = window.prompt("URL", prev || "https://");
-            if (url === null) return;
-            if (url === "") editor.chain().focus().extendMarkRange("link").unsetLink().run();
-            else editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-          }}
-          active={editor.isActive("link")}
-        ><LinkIcon className="h-3.5 w-3.5" /></ToolbarButton>
-      </BubbleMenu>
 
       <div className="p-4"><EditorContent editor={editor} /></div>
     </div>
