@@ -1,38 +1,95 @@
-import { Sun, Moon, Columns, GanttChart, MessageSquare, Settings, Sparkles, LogOut, LayoutGrid, Users, UsersRound, FolderOpen } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
+import { useState } from "react";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
-  SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
+  Sun, Moon, Sparkles, LogOut, ChevronRight, ChevronDown, Plus,
+  FileText, ListTodo, Folder as FolderIcon, MoreHorizontal, Trash2, Pencil, Settings,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Sidebar, SidebarContent, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
-import { useReceivedRequests } from "@/hooks/useTaskData";
 import { NotificationPanel } from "@/components/NotificationPanel";
+import {
+  useWorkspaceTree, useCreateSpace, useCreateFolder, useCreateList, useCreateDoc,
+  useRenameNode, useDeleteNode,
+} from "@/hooks/useWorkspaceTree";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+
+function InlineCreate({ placeholder, onSubmit, onCancel }: { placeholder: string; onSubmit: (v: string) => void; onCancel: () => void }) {
+  const [v, setV] = useState("");
+  return (
+    <Input
+      autoFocus
+      value={v}
+      placeholder={placeholder}
+      onChange={(e) => setV(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && v.trim()) onSubmit(v.trim());
+        if (e.key === "Escape") onCancel();
+      }}
+      onBlur={() => { v.trim() ? onSubmit(v.trim()) : onCancel(); }}
+      className="h-7 text-xs"
+    />
+  );
+}
+
+function NodeMenu({ onRename, onDelete, extra }: { onRename?: () => void; onDelete?: () => void; extra?: React.ReactNode }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-sidebar-accent">
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+        {extra}
+        {onRename && <DropdownMenuItem onClick={onRename}><Pencil className="h-3.5 w-3.5 mr-2" />Renomear</DropdownMenuItem>}
+        {onDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
+              <Trash2 className="h-3.5 w-3.5 mr-2" />Excluir
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { profile, signOut } = useAuth();
   const { isDark, toggle } = useTheme();
-  // unreadCount is now handled by NotificationPanel
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const navItems = [
-    { title: "Meu Dia", url: "/meu-dia", icon: Sun, badge: 0 },
-    { title: "Kanban", url: "/", icon: Columns, badge: 0 },
-    { title: "Panorâmica", url: "/panoramica", icon: LayoutGrid, badge: 0 },
-    { title: "Agenda", url: "/gantt", icon: GanttChart, badge: 0 },
-    { title: "Projetos", url: "/projetos", icon: FolderOpen, badge: 0 },
-    { title: "Chat IA", url: "/chat", icon: MessageSquare, badge: 0 },
-    { title: "Equipe", url: "/equipe", icon: Users, badge: 0 },
-    { title: "Equipes", url: "/equipes", icon: UsersRound, badge: 0 },
-    { title: "Configurações", url: "/configuracoes", icon: Settings, badge: 0 },
-  ];
+  const { data: tree } = useWorkspaceTree();
+  const createSpace = useCreateSpace();
+  const createFolder = useCreateFolder();
+  const createList = useCreateList();
+  const createDoc = useCreateDoc();
+  const rename = useRenameNode();
+  const del = useDeleteNode();
 
-  const initials = profile?.name
-    ? profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
-    : "?";
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [creatingIn, setCreatingIn] = useState<{ kind: "space" | "list" | "folder" | "doc"; parentId?: string; folderId?: string | null } | null>(null);
+  const [renaming, setRenaming] = useState<{ table: "spaces" | "folders" | "lists"; id: string; current: string } | null>(null);
+
+  const toggle_ = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
+
+  const initials = profile?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?";
+
+  const isListActive = (id: string) => location.pathname === `/l/${id}`;
+  const isDocActive = (id: string) => location.pathname === `/d/${id}`;
 
   return (
     <Sidebar collapsible="icon">
@@ -44,34 +101,197 @@ export function AppSidebar() {
           {!collapsed && <span className="font-heading text-lg font-bold text-foreground">Galileu's</span>}
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      activeClassName="bg-sidebar-accent text-primary font-semibold"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span className="flex-1">{item.title}</span>}
-                      {!collapsed && item.badge > 0 && (
-                        <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                          {item.badge}
-                        </Badge>
+
+      <SidebarContent className="px-2">
+        {!collapsed && (
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Espaços</span>
+            <button
+              onClick={() => setCreatingIn({ kind: "space" })}
+              className="p-0.5 rounded hover:bg-sidebar-accent"
+              title="Novo Espaço"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {creatingIn?.kind === "space" && !collapsed && (
+          <div className="px-2 pb-1">
+            <InlineCreate
+              placeholder="Nome do espaço"
+              onSubmit={(name) => {
+                createSpace.mutate(name, { onSuccess: () => toast({ description: "Espaço criado" }) });
+                setCreatingIn(null);
+              }}
+              onCancel={() => setCreatingIn(null)}
+            />
+          </div>
+        )}
+
+        <div className="space-y-0.5">
+          {tree?.map((node) => {
+            const spaceOpen = expanded[node.space.id] ?? true;
+            return (
+              <div key={node.space.id}>
+                <div
+                  className={cn(
+                    "group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent",
+                  )}
+                  onClick={() => toggle_(node.space.id)}
+                >
+                  {spaceOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="h-3 w-3 rounded shrink-0" style={{ backgroundColor: node.space.color || "#6366f1" }} />
+                  {!collapsed && (
+                    <>
+                      {renaming?.table === "spaces" && renaming.id === node.space.id ? (
+                        <InlineCreate
+                          placeholder="Nome"
+                          onSubmit={(name) => { rename.mutate({ table: "spaces", id: node.space.id, name }); setRenaming(null); }}
+                          onCancel={() => setRenaming(null)}
+                        />
+                      ) : (
+                        <span className="flex-1 truncate font-medium">{node.space.name}</span>
                       )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                      <NodeMenu
+                        onRename={() => setRenaming({ table: "spaces", id: node.space.id, current: node.space.name })}
+                        onDelete={() => { if (confirm("Excluir espaço e todo o conteúdo?")) del.mutate({ table: "spaces", id: node.space.id }); }}
+                        extra={
+                          <>
+                            <DropdownMenuItem onClick={() => setCreatingIn({ kind: "folder", parentId: node.space.id })}>
+                              <FolderIcon className="h-3.5 w-3.5 mr-2" />Nova pasta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCreatingIn({ kind: "list", parentId: node.space.id, folderId: null })}>
+                              <ListTodo className="h-3.5 w-3.5 mr-2" />Nova lista
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCreatingIn({ kind: "doc", parentId: node.space.id, folderId: null })}>
+                              <FileText className="h-3.5 w-3.5 mr-2" />Novo documento
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        }
+                      />
+                    </>
+                  )}
+                </div>
+
+                {spaceOpen && !collapsed && (
+                  <div className="ml-5 space-y-0.5 border-l border-sidebar-border pl-2">
+                    {node.folders.map((f) => {
+                      const folderOpen = expanded[f.id] ?? true;
+                      return (
+                        <div key={f.id}>
+                          <div className="group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent" onClick={() => toggle_(f.id)}>
+                            {folderOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+                            <FolderIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            {renaming?.table === "folders" && renaming.id === f.id ? (
+                              <InlineCreate placeholder="Nome" onSubmit={(name) => { rename.mutate({ table: "folders", id: f.id, name }); setRenaming(null); }} onCancel={() => setRenaming(null)} />
+                            ) : (
+                              <span className="flex-1 truncate">{f.name}</span>
+                            )}
+                            <NodeMenu
+                              onRename={() => setRenaming({ table: "folders", id: f.id, current: f.name })}
+                              onDelete={() => { if (confirm("Excluir pasta e todo o conteúdo?")) del.mutate({ table: "folders", id: f.id }); }}
+                              extra={
+                                <>
+                                  <DropdownMenuItem onClick={() => setCreatingIn({ kind: "list", parentId: node.space.id, folderId: f.id })}>
+                                    <ListTodo className="h-3.5 w-3.5 mr-2" />Nova lista
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setCreatingIn({ kind: "doc", parentId: node.space.id, folderId: f.id })}>
+                                    <FileText className="h-3.5 w-3.5 mr-2" />Novo documento
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              }
+                            />
+                          </div>
+                          {folderOpen && (
+                            <div className="ml-5 space-y-0.5 border-l border-sidebar-border pl-2">
+                              {f.lists.map((l) => (
+                                <div key={l.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/l/${l.id}`)}>
+                                  <ListTodo className="h-3.5 w-3.5 shrink-0" style={{ color: l.color || undefined }} />
+                                  {renaming?.table === "lists" && renaming.id === l.id ? (
+                                    <InlineCreate placeholder="Nome" onSubmit={(name) => { rename.mutate({ table: "lists", id: l.id, name }); setRenaming(null); }} onCancel={() => setRenaming(null)} />
+                                  ) : (
+                                    <span className="flex-1 truncate">{l.name}</span>
+                                  )}
+                                  <NodeMenu
+                                    onRename={() => setRenaming({ table: "lists", id: l.id, current: l.name })}
+                                    onDelete={() => { if (confirm("Excluir lista?")) del.mutate({ table: "lists", id: l.id }); }}
+                                  />
+                                </div>
+                              ))}
+                              {f.docs.map((d) => (
+                                <div key={d.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/d/${d.id}`)}>
+                                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  <span className="flex-1 truncate">{d.title}</span>
+                                  <NodeMenu
+                                    onDelete={() => { if (confirm("Excluir documento?")) del.mutate({ table: "docs", id: d.id }); }}
+                                  />
+                                </div>
+                              ))}
+                              {creatingIn?.kind === "list" && creatingIn.folderId === f.id && (
+                                <InlineCreate placeholder="Nome da lista" onSubmit={(name) => { createList.mutate({ space_id: node.space.id, folder_id: f.id, name }); setCreatingIn(null); }} onCancel={() => setCreatingIn(null)} />
+                              )}
+                              {creatingIn?.kind === "doc" && creatingIn.folderId === f.id && (
+                                <InlineCreate placeholder="Título do doc" onSubmit={(title) => { createDoc.mutate({ space_id: node.space.id, folder_id: f.id, title }); setCreatingIn(null); }} onCancel={() => setCreatingIn(null)} />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {node.looseLists.map((l) => (
+                      <div key={l.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/l/${l.id}`)}>
+                        <ListTodo className="h-3.5 w-3.5 shrink-0" style={{ color: l.color || undefined }} />
+                        <span className="flex-1 truncate">{l.name}</span>
+                        <NodeMenu
+                          onRename={() => setRenaming({ table: "lists", id: l.id, current: l.name })}
+                          onDelete={() => { if (confirm("Excluir lista?")) del.mutate({ table: "lists", id: l.id }); }}
+                        />
+                      </div>
+                    ))}
+                    {node.looseDocs.map((d) => (
+                      <div key={d.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/d/${d.id}`)}>
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="flex-1 truncate">{d.title}</span>
+                        <NodeMenu onDelete={() => { if (confirm("Excluir documento?")) del.mutate({ table: "docs", id: d.id }); }} />
+                      </div>
+                    ))}
+
+                    {creatingIn?.kind === "folder" && creatingIn.parentId === node.space.id && (
+                      <InlineCreate placeholder="Nome da pasta" onSubmit={(name) => { createFolder.mutate({ space_id: node.space.id, name }); setCreatingIn(null); }} onCancel={() => setCreatingIn(null)} />
+                    )}
+                    {creatingIn?.kind === "list" && creatingIn.parentId === node.space.id && creatingIn.folderId === null && (
+                      <InlineCreate placeholder="Nome da lista" onSubmit={(name) => { createList.mutate({ space_id: node.space.id, folder_id: null, name }); setCreatingIn(null); }} onCancel={() => setCreatingIn(null)} />
+                    )}
+                    {creatingIn?.kind === "doc" && creatingIn.parentId === node.space.id && creatingIn.folderId === null && (
+                      <InlineCreate placeholder="Título do doc" onSubmit={(title) => { createDoc.mutate({ space_id: node.space.id, folder_id: null, title }); setCreatingIn(null); }} onCancel={() => setCreatingIn(null)} />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {!collapsed && (
+          <div className="mt-4 border-t pt-2 space-y-0.5">
+            <button
+              onClick={() => navigate("/configuracoes")}
+              className={cn(
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-sidebar-accent",
+                location.pathname === "/configuracoes" && "bg-sidebar-accent text-primary font-medium",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Configurações
+            </button>
+          </div>
+        )}
       </SidebarContent>
+
       <SidebarFooter className="p-3 space-y-2">
         <div className="flex items-center gap-1">
           {!collapsed ? (

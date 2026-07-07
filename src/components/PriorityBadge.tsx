@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import type { TaskPriority } from "@/hooks/useTaskData";
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
   urgente: { label: 'Urgente', className: 'bg-priority-urgent/15 text-priority-urgent border-priority-urgent/30' },
