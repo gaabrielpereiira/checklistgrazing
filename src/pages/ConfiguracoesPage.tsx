@@ -760,6 +760,8 @@ function NotificationPreferences({ profile, updateProfile }: { profile: any; upd
 
 // --- Email Integration Component ---
 function EmailIntegration() {
+  const { profile } = useAuth();
+  const workspaceId = profile?.workspace_id;
   const [gmailUser, setGmailUser] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -771,14 +773,18 @@ function EmailIntegration() {
       toast.error("Preencha o email e a senha de app");
       return;
     }
+    if (!workspaceId) {
+      toast.error("Workspace não encontrado");
+      return;
+    }
     setSaving(true);
     try {
       // Salva os dois secrets no vault via store-api-key
       const { data: d1, error: e1 } = await supabase.functions.invoke("store-api-key", {
-        body: { service_name: "gmail_user", secret_value: gmailUser.trim(), label: "Gmail remetente" },
+        body: { service_name: "gmail_user", secret_value: gmailUser.trim(), workspace_id: workspaceId, label: "Gmail remetente" },
       });
       const { data: d2, error: e2 } = await supabase.functions.invoke("store-api-key", {
-        body: { service_name: "gmail_app_password", secret_value: appPassword.trim(), label: "Gmail App Password" },
+        body: { service_name: "gmail_app_password", secret_value: appPassword.trim(), workspace_id: workspaceId, label: "Gmail App Password" },
       });
       if (e1 || e2 || !d1?.success || !d2?.success) throw new Error("Erro ao salvar no vault");
       toast.success("Credenciais de email salvas! Reinicie a Edge Function notify-daily no dashboard do Supabase.");
