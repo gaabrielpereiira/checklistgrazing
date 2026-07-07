@@ -6,17 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import KanbanPage from "./pages/KanbanPage";
-import MeuDiaPage from "./pages/MeuDiaPage";
-import GanttPage from "./pages/GanttPage";
-import ChatPage from "./pages/ChatPage";
-import PanoramicPage from "./pages/PanoramicPage";
-import SolicitacoesPage from "./pages/SolicitacoesPage";
+import HomePage from "./pages/HomePage";
+import ListPage from "./pages/ListPage";
+import DocPage from "./pages/DocPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
-import EquipePage from "./pages/EquipePage";
-import EquipesPage from "./pages/EquipesPage";
-import ProjectsPage from "./pages/ProjectsPage";
-import ProjectDetailPage from "./pages/ProjectDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,16 +29,9 @@ function ProtectedRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<KanbanPage />} />
-      <Route path="/meu-dia" element={<MeuDiaPage />} />
-      <Route path="/gantt" element={<GanttPage />} />
-      <Route path="/chat" element={<ChatPage />} />
-      <Route path="/panoramica" element={<PanoramicPage />} />
-      <Route path="/solicitacoes" element={<SolicitacoesPage />} />
-      <Route path="/equipe" element={<EquipePage />} />
-      <Route path="/equipes" element={<EquipesPage />} />
-      <Route path="/projetos" element={<ProjectsPage />} />
-      <Route path="/projetos/:projectId" element={<ProjectDetailPage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/l/:listId" element={<ListPage />} />
+      <Route path="/d/:docId" element={<DocPage />} />
       <Route path="/configuracoes" element={<ConfiguracoesPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
