@@ -20,7 +20,7 @@ export function StepWelcome() {
         <Sparkles className="h-10 w-10 text-primary-foreground" />
       </motion.div>
       <div className="space-y-2">
-        <h2 className="font-heading text-3xl font-bold">Bem-vindo ao Alexandre</h2>
+        <h2 className="font-heading text-3xl font-bold">Bem-vindo ao Galileu's</h2>
         <p className="text-muted-foreground max-w-md">
           Vamos configurar tudo em poucos passos. Você pode pular o que quiser e voltar depois nas Configurações.
         </p>

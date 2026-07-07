@@ -7,7 +7,7 @@ interface Props {
   onOpenWizard: () => void;
 }
 
-const DISMISS_KEY = "alexandre_onboarding_banner_dismissed";
+const DISMISS_KEY = "galileus_onboarding_banner_dismissed";
 
 export function OnboardingBanner({ onOpenWizard }: Props) {
   const { loading, isComplete, steps, completionPercentage, isAdmin } = useOnboardingStatus();
@@ -37,7 +37,7 @@ export function OnboardingBanner({ onOpenWizard }: Props) {
               <Rocket className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-foreground truncate">Configure o Alexandre</h3>
+              <h3 className="text-sm font-semibold text-foreground truncate">Configure o Galileu's</h3>
               <p className="text-xs text-muted-foreground truncate">Termine os passos para tirar o máximo da plataforma</p>
             </div>
           </div>
