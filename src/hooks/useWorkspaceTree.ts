@@ -167,10 +167,11 @@ export function useDeleteNode() {
 export function useMoveNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ table, id, patch }: { table: "lists" | "docs" | "folders"; id: string; patch: { space_id?: string; folder_id?: string | null } }) => {
-      const { error } = await supabase.from(table).update(patch).eq("id", id);
+    mutationFn: async (v: { table: "lists" | "docs" | "folders"; id: string; patch: { space_id?: string; folder_id?: string | null } }) => {
+      const { error } = await (supabase.from(v.table) as any).update(v.patch).eq("id", v.id);
       if (error) throw error;
     },
+
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-tree"] }),
   });
 }
