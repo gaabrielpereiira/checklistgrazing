@@ -1,4 +1,4 @@
-// Slack slash command — read-only AI chat for TaskAI.
+// Slack slash command — read-only AI chat for Alexandre.
 // Validates Slack signature using signing_secret stored in Supabase Vault (referenced via slack_settings.vault_signing_secret_id),
 // maps Slack user_id → profile (via slack_user_id column), and runs the shared chat turn.
 
@@ -128,7 +128,7 @@ async function processCommand(
   if (!profile) {
     await sendResponse({
       response_type: "ephemeral",
-      text: `❌ Seu Slack User ID (\`${slackUserId}\`) não está vinculado a nenhuma conta no TaskAI. Acesse Configurações → Perfil no app e cole esse ID no campo "Slack User ID".`,
+      text: `❌ Seu Slack User ID (\`${slackUserId}\`) não está vinculado a nenhuma conta no Alexandre. Acesse Configurações → Perfil no app e cole esse ID no campo "Slack User ID".`,
     });
     return;
   }
@@ -235,7 +235,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         response_type: "ephemeral",
-        text: "🤖 *TaskAI no Slack*\nUse: `/taskai sua pergunta`\n\nExemplos:\n• `/taskai quais minhas tasks de hoje?`\n• `/taskai o que tenho pra amanhã?`\n• `/taskai tasks da coleção Marketing`",
+        text: "🤖 *Alexandre no Slack*\nUse: `/alexandre sua pergunta`\n\nExemplos:\n• `/alexandre quais minhas tasks de hoje?`\n• `/alexandre o que tenho pra amanhã?`\n• `/alexandre tasks da coleção Marketing`",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
@@ -254,7 +254,7 @@ Deno.serve(async (req: Request) => {
   );
 
   return new Response(
-    JSON.stringify({ response_type: "ephemeral", text: "⏳ Consultando TaskAI..." }),
+    JSON.stringify({ response_type: "ephemeral", text: "⏳ Consultando Alexandre..." }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });

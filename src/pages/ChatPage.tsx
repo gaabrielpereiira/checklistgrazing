@@ -539,7 +539,7 @@ export default function ChatPage() {
     setConversations(prev => prev.filter(c => c.id !== convId));
     if (activeConversationId === convId) {
       setActiveConversationId(null);
-      setMessages([{ id: "welcome", role: "assistant", content: "Olá! 👋 Sou a IA do TaskAI. Como posso te ajudar?" }]);
+      setMessages([{ id: "welcome", role: "assistant", content: "Olá! 👋 Sou a IA do Alexandre. Como posso te ajudar?" }]);
     }
   };
 
