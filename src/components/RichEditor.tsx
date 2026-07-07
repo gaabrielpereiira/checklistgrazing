@@ -40,6 +40,22 @@ export function RichEditor({ content, onChange }: Props) {
   return (
     <div>
       <div className="sticky top-0 z-10 bg-background border-b flex items-center gap-1 py-1.5 px-2 flex-wrap">
+        <ToolbarButton title="Negrito" onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")}><Bold className="h-4 w-4" /></ToolbarButton>
+        <ToolbarButton title="Itálico" onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")}><Italic className="h-4 w-4" /></ToolbarButton>
+        <ToolbarButton title="Riscado" onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")}><Strikethrough className="h-4 w-4" /></ToolbarButton>
+        <ToolbarButton
+          title="Link"
+          active={editor.isActive("link")}
+          onClick={() => {
+            const prev = editor.getAttributes("link").href;
+            const url = window.prompt("URL", prev || "https://");
+            if (url === null) return;
+            if (url === "") editor.chain().focus().extendMarkRange("link").unsetLink().run();
+            else editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+          }}
+        ><LinkIcon className="h-4 w-4" /></ToolbarButton>
+        <div className="w-px h-5 bg-border mx-1" />
+
         <ToolbarButton title="Título 1" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })}><Heading1 className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton title="Título 2" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })}><Heading2 className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton title="Título 3" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })}><Heading3 className="h-4 w-4" /></ToolbarButton>
