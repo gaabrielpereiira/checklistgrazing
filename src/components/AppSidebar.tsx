@@ -17,8 +17,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { NotificationPanel } from "@/components/NotificationPanel";
 import {
   useWorkspaceTree, useCreateSpace, useCreateFolder, useCreateList, useCreateDoc,
-  useRenameNode, useDeleteNode,
+  useRenameNode, useDeleteNode, useMoveNode,
 } from "@/hooks/useWorkspaceTree";
+
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
