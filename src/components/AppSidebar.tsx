@@ -250,7 +250,10 @@ export function AppSidebar() {
                           {folderOpen && (
                             <div className="ml-5 space-y-0.5 border-l border-sidebar-border pl-2">
                               {f.lists.map((l) => (
-                                <div key={l.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/l/${l.id}`)}>
+                                <div key={l.id} draggable onDragStart={(e) => onDragStart(e, "lists", l.id)}
+                                  className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isListActive(l.id) && "bg-sidebar-accent text-primary font-medium")}
+                                  onClick={() => navigate(`/l/${l.id}`)}>
+
                                   <ListTodo className="h-3.5 w-3.5 shrink-0" style={{ color: l.color || undefined }} />
                                   {renaming?.table === "lists" && renaming.id === l.id ? (
                                     <InlineCreate placeholder="Nome" onSubmit={(name) => { rename.mutate({ table: "lists", id: l.id, name }); setRenaming(null); }} onCancel={() => setRenaming(null)} />
@@ -264,7 +267,10 @@ export function AppSidebar() {
                                 </div>
                               ))}
                               {f.docs.map((d) => (
-                                <div key={d.id} className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")} onClick={() => navigate(`/d/${d.id}`)}>
+                                <div key={d.id} draggable onDragStart={(e) => onDragStart(e, "docs", d.id)}
+                                  className={cn("group flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer hover:bg-sidebar-accent", isDocActive(d.id) && "bg-sidebar-accent text-primary font-medium")}
+                                  onClick={() => navigate(`/d/${d.id}`)}>
+
                                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                   <span className="flex-1 truncate">{d.title}</span>
                                   <NodeMenu
