@@ -177,8 +177,8 @@ export function useCreateCollection() {
   const createFull = useCreateCollectionWithColumns();
   return {
     ...createFull,
-    mutate: (name: string) => createFull.mutate({ name, columns: ["A Fazer", "Em Progresso", "Concluído"] }),
-    mutateAsync: (name: string) => createFull.mutateAsync({ name, columns: ["A Fazer", "Em Progresso", "Concluído"] }),
+    mutate: (name: string) => createFull.mutate({ name, columns: ["Pessoal", "Grazing", "Outro"] }),
+    mutateAsync: (name: string) => createFull.mutateAsync({ name, columns: ["Pessoal", "Grazing", "Outro"] }),
   };
 }
 

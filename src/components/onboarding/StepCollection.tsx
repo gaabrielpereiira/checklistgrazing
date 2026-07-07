@@ -52,9 +52,9 @@ export function StepCollection({ workspaceId, registerSave }: Props) {
     }
     // Create default columns
     const defaultCols = [
-      { name: "A Fazer", position: 0, color: "#94a3b8" },
-      { name: "Em Andamento", position: 1, color: "#3b82f6" },
-      { name: "Concluído", position: 2, color: "#10b981" },
+      { name: "Pessoal", position: 0, color: "#94a3b8" },
+      { name: "Grazing", position: 1, color: "#3b82f6" },
+      { name: "Outro", position: 2, color: "#10b981" },
     ];
     await supabase.from("columns").insert(defaultCols.map(c => ({ ...c, collection_id: col.id })));
     setNewName("");
@@ -89,7 +89,7 @@ export function StepCollection({ workspaceId, registerSave }: Props) {
       </div>
       <div className="space-y-2">
         {collections.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Nenhuma coleção ainda. Crie a primeira acima — vamos adicionar 3 colunas padrão (A Fazer / Em Andamento / Concluído).</p>
+          <p className="text-sm text-muted-foreground italic">Nenhuma coleção ainda. Crie a primeira acima — vamos adicionar 3 colunas padrão (Pessoal / Grazing / Outro).</p>
         ) : (
           collections.map((c) => (
             <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 px-3 py-2">

@@ -14,7 +14,7 @@ const TEMPLATES: Record<string, string[]> = {
   "Suporte": ["Novo", "Em Análise", "Em Andamento", "Aguardando Cliente", "Resolvido"],
 };
 
-const DEFAULT_COLUMNS = ["A Fazer", "Em Progresso", "Concluído"];
+const DEFAULT_COLUMNS = ["Pessoal", "Grazing", "Outro"];
 
 interface NewCollectionModalProps {
   open: boolean;

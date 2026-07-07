@@ -1115,6 +1115,32 @@ export default function ConfiguracoesPage() {
     return role?.role || "usuario";
   };
 
+  const handleUpdateOldDefaultColumns = async () => {
+    if (!isAdmin) return;
+    
+    const { data: cols, error } = await supabase
+      .from('columns')
+      .select('id, name')
+      .in('name', ['A Fazer', 'Em Progresso', 'Em Andamento', 'Concluído']);
+
+    if (error || !cols || cols.length === 0) return;
+
+    const updates = cols.map(col => {
+      let newName = col.name;
+      if (col.name === 'A Fazer') newName = 'Pessoal';
+      else if (col.name === 'Em Progresso' || col.name === 'Em Andamento') newName = 'Grazing';
+      else if (col.name === 'Concluído') newName = 'Outro';
+      
+      return supabase.from('columns').update({ name: newName }).eq('id', col.id);
+    });
+
+    await Promise.all(updates);
+    qc.invalidateQueries({ queryKey: ['columns'] });
+    qc.invalidateQueries({ queryKey: ['all-columns'] });
+    toast.success("Colunas padrão atualizadas!");
+  };
+
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-3xl p-6">
@@ -1135,7 +1161,30 @@ export default function ConfiguracoesPage() {
               <Sparkles className="h-3.5 w-3.5" /> Reabrir Wizard
             </Button>
           )}
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdateOldDefaultColumns}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Atualizar Nomes
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new Event("taskai:open-onboarding"))}
+                className="gap-2"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Reabrir Wizard
+              </Button>
+            )}
+          </div>
         </div>
+
 
         <Tabs defaultValue="perfil">
           <TabsList className="flex-wrap h-auto gap-1">
