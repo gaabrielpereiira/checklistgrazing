@@ -481,7 +481,7 @@ export default function ChatPage() {
   // Load messages for active conversation
   useEffect(() => {
     if (!activeConversationId || !user) {
-      setMessages([{ id: "welcome", role: "assistant", content: "Olá! 👋 Sou a IA do TaskAI. Posso criar tasks, projetos, registrar impedimentos e gerar solicitações. Como posso te ajudar?" }]);
+      setMessages([{ id: "welcome", role: "assistant", content: "Olá! 👋 Sou a IA do Alexandre. Posso criar tasks, projetos, registrar impedimentos e gerar solicitações. Como posso te ajudar?" }]);
       return;
     }
     supabase.from("chat_messages").select("*").eq("conversation_id", activeConversationId).order("created_at")
