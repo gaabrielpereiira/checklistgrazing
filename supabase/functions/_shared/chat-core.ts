@@ -235,7 +235,7 @@ export function buildSystemPrompt(
 - Ao usar set_task_schedule, envie TODOS os dias de trabalho da task (a tool substitui os agendamentos existentes). A soma das horas deve bater com duration_hours da task.
 `;
 
-  return `Voce e a IA do TaskAI, assistente de gerenciamento de tarefas. Responda em portugues brasileiro, conciso e amigavel. Hoje e ${today}.
+  return `Voce e a IA do Alexandre, assistente de gerenciamento de tarefas. Responda em portugues brasileiro, conciso e amigavel. Hoje e ${today}.
 
 Usuario: ${userName} (${role})
 ${permissionNote}

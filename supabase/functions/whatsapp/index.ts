@@ -222,7 +222,7 @@ serve(async (req) => {
       if (!profile) {
         console.log(`[whatsapp] No profile matched for phone=${resolved.phone}`);
         if (instanceName) {
-          await sendWhatsAppMessageViaInstance(supabase, instanceName, resolved.phone, "❌ Seu número não está cadastrado no TaskAI. Cadastre-o nas Configurações do app.");
+          await sendWhatsAppMessageViaInstance(supabase, instanceName, resolved.phone, "❌ Seu número não está cadastrado no Alexandre. Cadastre-o nas Configurações do app.");
         }
         return new Response("ok", { headers: corsHeaders });
       }

@@ -213,7 +213,7 @@ function buildSystemPrompt(
     permissionNote = "Voce e USUARIO — ve apenas suas proprias tasks.";
   }
 
-  return `Voce e a IA do TaskAI, assistente de gerenciamento de tarefas. Responda em portugues brasileiro, conciso e amigavel. Hoje e ${today}.
+  return `Voce e a IA do Alexandre, assistente de gerenciamento de tarefas. Responda em portugues brasileiro, conciso e amigavel. Hoje e ${today}.
 
 Usuario: ${userName} (${role})
 ${permissionNote}
