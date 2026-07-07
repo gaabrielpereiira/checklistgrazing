@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import KanbanPage from "./pages/KanbanPage";
 import MeuDiaPage from "./pages/MeuDiaPage";
 import GanttPage from "./pages/GanttPage";
