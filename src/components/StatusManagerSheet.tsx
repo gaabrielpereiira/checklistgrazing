@@ -7,7 +7,7 @@ import { Trash2, Plus } from "lucide-react";
 import { useStatuses } from "@/hooks/useListData";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ColorPicker } from "@/components/ColorPicker";
+
 
 const TYPES = [
   { value: "todo", label: "A fazer" },
@@ -52,7 +52,13 @@ export function StatusManagerSheet({ listId, trigger }: { listId: string; trigge
         <div className="flex-1 overflow-auto mt-4 space-y-2">
           {statuses.map((s) => (
             <div key={s.id} className="flex items-center gap-2 border rounded-md p-2">
-              <ColorPicker value={s.color} onChange={(color) => update.mutate({ id: s.id, patch: { color } })} />
+              <input
+                type="color"
+                value={s.color}
+                onChange={(e) => update.mutate({ id: s.id, patch: { color: e.target.value } })}
+                className="h-7 w-7 rounded cursor-pointer border-0 shrink-0"
+              />
+
               <Input
                 defaultValue={s.name}
                 onBlur={(e) => e.target.value !== s.name && update.mutate({ id: s.id, patch: { name: e.target.value } })}
